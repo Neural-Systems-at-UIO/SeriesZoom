@@ -1,0 +1,28 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "type": "SoftwareSourceCode",
+    "author": [
+        {
+            "id": "https://orcid.org/0000-0002-2093-6274",
+            "type": "Person",
+            "affiliation": {
+                "type": "Organization",
+                "name": "NeSys, University of Oslo"
+            },
+            "familyName": "Csucs",
+            "givenName": "Gergely"
+        }
+    ],
+    "codeRepository": "https://github.com/Neural-Systems-at-UIO/SeriesZoom.git",
+    "dateCreated": "2023-11-08",
+    "dateModified": "2024-12-12",
+    "datePublished": "2023-11-08",
+    "license": "https://spdx.org/licenses/MIT",
+    "name": "SeriesZoom",
+    "programmingLanguage": "JavaScript",
+    "runtimePlatform": "Web",
+    "version": "1.0",
+    "developmentStatus": "active",
+    "funding": "H2020-EU FPA 650003 (HBP FPA) and HORIZON-INFRA (EBRAINS 2.0) 101147319",
+    "issueTracker": "https://github.com/Neural-Systems-at-UIO/SeriesZoom/issues"
+}
