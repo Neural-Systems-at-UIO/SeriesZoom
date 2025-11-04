@@ -1,22 +1,18 @@
 # SeriesZoom
 
 SeriesZoom is one of several tools developed by the Nesys laboratory, University of Oslo and participating to EBRAINS with the aim of facilitating brain atlas based analysis and integration of experimental data and knowledge about the human and rodent brain.
-SeriesZoom is a online viewer, typically used for high resolution histological images. Building on the open standard Deep Zoom Image (DZI) format, it is able to efficiently visualise very large brain images in the gigapixel range, allowing to zoom from common, display-sized overview resolutions down to the microscopic resolution without downloading the underlying very large image dataset.
+SeriesZoom is a online viewer, typically used for high resolution histological images. Building on the open standard Deep Zoom Image (DZI) format, it is able to efficiently visualise very large brain images in the gigapixel range, allowing to zoom from common, display-sized overview resolutions down to the microscopic resolution without downloading the underlying very large image dataset. SeriesZoom is currently used internally to serve EBRAINS dataset card service links.
 
-# Developper
-Gergely Csucs
+# Latest stable version
+v0.7
 
-# Documentation
+# Contributors
 
-
-# Authors
- Maja A Puchades
+- Programming: Gergely Csucs
+- Conception, design, validation: Maja Puchades, Sharon Yates, Jan Bjaalie.
 
 # Licence
 - Source code: MIT License
-
-# Current version
-- v0.7
 
 # Citation
 **SeriesZoom (RRID:SCR_026908)**
