@@ -26,7 +26,7 @@
       }
     },
         {
-      "givenName": "Maja A",
+      "givenName": "Maja A.",
       "familyName": "Puchades",
       "type": "Person",
       "id": "https://orcid.org/0000-0002-4536-8197",
@@ -59,6 +59,7 @@
   "softwareHelp": [
     "mailto:support@ebrains.eu"
   ],
+  
   "programmingLanguage": [
     "JavaScript"
   ],
@@ -74,7 +75,8 @@
   "keywords": [
     "Image viewer"
   ],
- "maintainer": [
+  "referencePublication": "https://doi.org/10.3389/fninf.2025.1629388",
+  "maintainer": [
     {
       "givenName": "Gergely",
       "familyName": "Csucs",
