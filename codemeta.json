@@ -72,7 +72,7 @@
   "issueTracker": "https://github.com/Neural-Systems-at-UIO/SeriesZoom/issues",
   "continuousIntegration": "https://github.com/Neural-Systems-at-UIO/SeriesZoom.git",
   "keywords": [
-    "Image viewer",
+    "Image viewer"
   ],
  "maintainer": [
     {
