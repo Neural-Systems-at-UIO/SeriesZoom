@@ -62,7 +62,7 @@
   "programmingLanguage": [
     "JavaScript",
   ],
-  "runtimePlatform": "Web"
+  "runtimePlatform": "Web",
   "operatingSystem": [
     "Windows",
     "macOS",
