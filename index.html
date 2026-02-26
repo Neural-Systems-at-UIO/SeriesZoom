@@ -119,26 +119,32 @@
                 const objects = "objects" in result ? result.objects : Array.isArray(result) ? result : false;
                 if (!objects)
                     return; //!!
-                let requests, candidates;
+                let items;
                 if (dzip) {
-                    const td = new TextDecoder();
-                    candidates = objects.filter(item => "name" in item && (item.name.endsWith(".dzip"))).map(item => item.name);
-                    requests = candidates.map(async item => {
-                        const name = item.substring(item.lastIndexOf("/") + 1, item.length - 5);
-                        const dzip = token ?
-                                await netunzip(() => fetch(`${bucket}/${item}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
-                                await netunzip(() => fetch(`${bucket}/${item}?redirect=false`).then(response => response.json()).then(json => json.url));
-//                                await netunzip(`${bucket}/${item}`);
-                        const dzi = td.decode(await dzip.get(dzip.entries.get(name + ".dzi")));
-                        return {
-                            name,
-                            dzip,
-                            ...parsedzi(dzi)
-                        };
-                    });
+//                    const td = new TextDecoder();
+//                    const candidates = objects.filter(item => "name" in item && (item.name.endsWith(".dzip"))).map(item => item.name);
+//                    const requests = candidates.map(async item => {
+//                        const name = item.substring(item.lastIndexOf("/") + 1, item.length - 5);
+//                        const dzip = token ?
+//                                await netunzip(() => fetch(`${bucket}/${item}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+//                                await netunzip(() => fetch(`${bucket}/${item}?redirect=false`).then(response => response.json()).then(json => json.url));
+////                                await netunzip(`${bucket}/${item}`);
+//                        const dzi = td.decode(await dzip.get(dzip.entries.get(name + ".dzi")));
+//                        return {
+//                            name,
+//                            dzip,
+//                            ...parsedzi(dzi)
+//                        };
+//                    });
+//                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
+                    items=objects.filter(item => "name" in item && (item.name.endsWith(".dzip"))).map(item => item.name).map(zipath => ({
+                        zipath,
+                        name: zipath.substring(zipath.lastIndexOf("/") + 1, zipath.length - 5),
+                        notready: true
+                    }));
                 } else if (!bucket.startsWith("https://object.cscs.ch/v1/AUTH_")) { //!!
-                    candidates = objects.filter(item => "subdir" in item && item.subdir.includes("."));
-                    requests = candidates.map(async item => {
+                    const candidates = objects.filter(item => "subdir" in item && item.subdir.includes("."));
+                    const requests = candidates.map(async item => {
                         const name = item.subdir.substring(0, item.subdir.lastIndexOf("."));
                         const dzi = await fetch(`${bucket}/${prefix ?? ""}${item.subdir}${name}.dzi`).then(response => response.text());
                         return {
@@ -147,9 +153,10 @@
                             ...parsedzi(dzi)
                         };
                     });
+                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
                 } else {
-                    candidates = objects.filter(item => "name" in item && (item.name.endsWith(".xml") || item.name.endsWith(".dzi")));
-                    requests = candidates.map(async item => {
+                    const candidates = objects.filter(item => "name" in item && (item.name.endsWith(".xml") || item.name.endsWith(".dzi")));
+                    const requests = candidates.map(async item => {
                         const name = item.name.slice(0, -4);
                         const dzi = await fetch(`${bucket}/${item.name}`).then(response => response.text());
                         return {
@@ -158,11 +165,12 @@
                             ...parsedzi(dzi)
                         };
                     });
+                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
                 }
                 const scroller = document.getElementById("stripscroller");
-                for (const candidate of await Promise.allSettled(requests)) {
-                    if ("value" in candidate) {
-                        const image = candidate.value;
+                for (const item of items) {
+                    const image = item;
+                    if(!dzip) {
                         let maxlevel = 0;
                         let {width: w, height: h} = image;
                         while (w > 1 || h > 1) {
@@ -171,39 +179,71 @@
                             maxlevel++;
                         }
                         image.maxlevel = maxlevel;
-                        const canvas = document.createElement("canvas");
+                    }
+                    const canvas = document.createElement("canvas");
+                    canvas.title = item.name;
+                    if(!dzip) {
                         canvas.width = 128;
                         canvas.height = Math.floor(image.height * 128 / image.width);
-                        canvas.addEventListener("click", activate);
-                        canvas.classList.add("icon");
-                        image.canvas = canvas;
-//                            drawX(canvas);
-                        scroller.appendChild(canvas);
-                        images.push(image);
-                        iconmap.set(canvas, image);
-                        observer.observe(canvas);
+                    } else {
+                        canvas.width = canvas.height = 128;
                     }
+                    canvas.addEventListener("click", activate);
+                    canvas.classList.add("icon");
+                    image.canvas = canvas;
+//                    drawX(canvas);
+                    scroller.appendChild(canvas);
+                    images.push(image);
+                    iconmap.set(canvas, image);
+                    observer.observe(canvas);
                 }
                 let mid = images[images.length >> 1].canvas;
 //                    mid.style.background="orange";
 //                    mid.style.border="2px solid orange";
 //                    mid.classList.toggle("active");
 //                    mid.scrollIntoView({block: "center"});
-                activate({target: mid});
+                activate({target: mid}, true);
 //                console.log(images);
                 fullCanvas();
             }
             let active;
             let zoomer;
-            function activate(event) {
+            async function activate(event, start) {
                 if (active === event.target)
                     return;
                 if (active)
                     active.classList.remove("active");
                 active = event.target;
                 active.classList.add("active");
-                active.scrollIntoView({block: "center"});
-                const {name, base, dzip, width, height, tilesize, overlap, format, maxlevel} = iconmap.get(active);
+//                active.scrollIntoView({block: "center"});
+                active.scrollIntoView({
+                    behavior: start ? "instant" : "smooth",
+                    block: start ? "center" : "nearest",
+                    container: "nearest"
+                });
+                const image = iconmap.get(active);
+                if(image.notready) {
+                    if(!image.hasOwnProperty("dzip")) {
+                        image.dzip = token ?
+                            await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+                            await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
+                    }
+                    if(!image.hasOwnProperty("dzi")) {
+                        const td = new TextDecoder();
+                        image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
+                        Object.assign(image,parsedzi(image.dzi));
+                        let maxlevel = 0;
+                        let {width, height} = image;
+                        while (width > 1 || height > 1) {
+                            width = (width + 1) >> 1;
+                            height = (height + 1) >> 1;
+                            maxlevel++;
+                        }
+                        image.maxlevel = maxlevel;
+                    }
+                    delete image.notready;
+                }
+                const {name, base, dzip, width, height, tilesize, overlap, format, maxlevel} = image;
                 const DZIcfg = {
                     Width: width,
                     Height: height,
@@ -218,6 +258,8 @@
                                 tile.crossOrigin = "anonymous";
                                 tile.src = `${base}${maxlevel - level}/${x}_${y}.${format}`;
                             } else {
+                                const temp=`${name}_files/${maxlevel - level}/${x}_${y}.${format}`;
+                                if(dzip.entries.get(temp)===undefined)debugger;
                                 const data = await dzip.get(dzip.entries.get(`${name}_files/${maxlevel - level}/${x}_${y}.${format}`));
                                 const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
                                 tile.onerror = () => {
@@ -254,7 +296,29 @@
                 for (const entry of entries)
                     if (entry.isIntersecting) {
                         const canvas = entry.target;
-                        const {name, base, dzip, format} = iconmap.get(canvas);
+                        const image = iconmap.get(canvas);
+                        if(image.notready) {
+                            if(!image.hasOwnProperty("dzip")) {
+                                image.dzip = token ?
+                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
+                            }
+                            if(!image.hasOwnProperty("dzi")) {
+                                const td = new TextDecoder();
+                                image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
+                                Object.assign(image,parsedzi(image.dzi));
+                                let maxlevel = 0;
+                                let {width, height} = image;
+                                while (width > 1 || height > 1) {
+                                    width = (width + 1) >> 1;
+                                    height = (height + 1) >> 1;
+                                    maxlevel++;
+                                }
+                                image.maxlevel = maxlevel;
+                            }
+                            delete image.notready;
+                        }
+                        const {name, base, dzip, format} = image;
 //                        iconmap.delete(canvas);
                         observer.unobserve(canvas);
                         const img = document.createElement("img");
@@ -268,7 +332,13 @@
                             const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
                             img.onload = () => {
                                 URL.revokeObjectURL(url);
-                                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+//                                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                                const {width, height} = image;
+                                const w = width > height ? 128 : 128 * width / height;
+                                const x = (128 - w) / 2;
+                                const h = width > height ? 128 * height / width : 128;
+                                const y = (128 - h) / 2;
+                                canvas.getContext("2d").drawImage(img, x, y, w, h);
                             };
                             img.src = url;
                         }
