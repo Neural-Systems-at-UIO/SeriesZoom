@@ -292,8 +292,8 @@
                 if(overlay)
                     setupoverlay(name, width, height, DZIcfg);
             }
-            async function loader(entries) {
-                for (const entry of entries)
+            function loader(entries) {
+                entries.forEach(async entry => {
                     if (entry.isIntersecting) {
                         const canvas = entry.target;
                         const image = iconmap.get(canvas);
@@ -332,7 +332,6 @@
                             const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
                             img.onload = () => {
                                 URL.revokeObjectURL(url);
-//                                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
                                 const {width, height} = image;
                                 const w = width > height ? 128 : 128 * width / height;
                                 const x = (128 - w) / 2;
@@ -343,6 +342,7 @@
                             img.src = url;
                         }
                     }
+                });
             }
             function fullCanvas() {
 //                requestAnimationFrame(() => {
