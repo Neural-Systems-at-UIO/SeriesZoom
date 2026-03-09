@@ -41,6 +41,7 @@
                 flex-direction: column;
             }
             .icon{
+                position: relative;
                 border-top: 5px solid transparent;
                 border-bottom: 5px solid transparent;
                 /*                margin-bottom: 10px;
@@ -49,6 +50,31 @@
             .icon.active{
                 border-top: 5px solid orange;
                 border-bottom: 5px solid orange;
+            }
+            .iconcnv{
+                display: block;
+                pointer-events: none;
+            }
+            .loaderdiv {
+                position: absolute;
+                pointer-events: none;
+                margin: 0;
+                top:20px;
+                bottom:20px;
+                left:20px;
+                right:20px;
+                border: 16px solid lightgrey;
+                border-top: 16px solid green;
+                border-radius: 50%;
+                animation: spin 2s linear infinite;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
             }
             #meta{
                 color: black;
@@ -181,24 +207,28 @@
                         }
                         image.maxlevel = maxlevel;
                     }
+                    const div = document.createElement("div");
+                    image.div = div;
+                    div.className = "icon";
+                    div.title = item.name;
+                    div.addEventListener("click", activate);
                     const canvas = document.createElement("canvas");
-                    canvas.title = item.name;
+                    image.canvas = canvas;
                     if (!dzip) {
                         canvas.width = 128;
                         canvas.height = Math.floor(image.height * 128 / image.width);
                     } else {
                         canvas.width = canvas.height = 128;
                     }
-                    canvas.addEventListener("click", activate);
-                    canvas.classList.add("icon");
-                    image.canvas = canvas;
-//                    drawX(canvas);
-                    scroller.appendChild(canvas);
+//                    drawX(canvas)
+                    canvas.className = "iconcnv";
+                    div.appendChild(canvas);
+                    scroller.appendChild(div);
                     images.push(image);
-                    iconmap.set(canvas, image);
-                    observer.observe(canvas);
+                    iconmap.set(div, image);
+                    observer.observe(div);
                 }
-                let mid = images[images.length >> 1].canvas;
+                let mid = images[images.length >> 1].div;
 //                    mid.style.background="orange";
 //                    mid.style.border="2px solid orange";
 //                    mid.classList.toggle("active");
@@ -295,8 +325,11 @@
             function loader(entries) {
                 entries.forEach(async entry => {
                     if (entry.isIntersecting) {
-                        const canvas = entry.target;
-                        const image = iconmap.get(canvas);
+                        const div = entry.target;
+                        const ldr = document.createElement("div");
+                        ldr.className = "loaderdiv";
+                        div.appendChild(ldr);
+                        const image = iconmap.get(div);
                         if (image.notready) {
                             if (!image.hasOwnProperty("dzip")) {
                                 image.dzip = token ?
@@ -318,13 +351,14 @@
                             }
                             delete image.notready;
                         }
-                        const {name, base, dzip, format} = image;
+                        const {canvas, name, base, dzip, format} = image;
 //                        iconmap.delete(canvas);
-                        observer.unobserve(canvas);
+                        observer.unobserve(div);
                         const img = document.createElement("img");
                         if (base) {
                             img.onload = () => {
                                 canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                                div.removeChild(ldr);
                             };
                             img.src = `${base}8/0_0.${format}`;
                         } else {
@@ -338,6 +372,7 @@
                                 const h = width > height ? 128 * height / width : 128;
                                 const y = (128 - h) / 2;
                                 canvas.getContext("2d").drawImage(img, x, y, w, h);
+                                div.removeChild(ldr);
                             };
                             img.src = url;
                         }
