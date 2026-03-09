@@ -76,6 +76,12 @@
                     transform: rotate(360deg);
                 }
             }
+            #progress{
+                width: 80%;
+                text-align: center;
+                border: 2px solid black;
+                margin: auto;
+            }
             #meta{
                 color: black;
                 background: lightgray;
@@ -137,7 +143,22 @@
                     format: dzi.match(/Format="([^"]+)"/m)[1]
                 };
             }
+            let progress;
             async function start() {
+                document.getElementById("splash").showModal();
+                progress = {
+                    phase: 0,
+                    msg: `Opening bucket ${bucket} `,
+                    id: setInterval(() => {
+                        document.getElementById("console").innerText = progress.msg + ("-\\|/".charAt(progress.phase++));
+                        progress.phase &= 3;
+                    }, 20),
+                    update: line => progress.msg += `\n${line}`,
+                    stop: () => {
+                        clearInterval(progress.id);
+                        document.getElementById("console").innerText = progress.msg;
+                    }
+                };
                 if (!overlay)
                     document.getElementById("ovlyopacity").style.display = "none";
                 const result = token ?
@@ -194,6 +215,7 @@
                     });
                     items = await Promise.allSettled(requests).then(results => results.filter(result => "value" in result).map(result => result.value));
                 }
+                progress.update(items.length + " images found, fetching initial view ");
                 const scroller = document.getElementById("stripscroller");
                 for (const item of items) {
                     const image = item;
@@ -323,61 +345,82 @@
                     setupoverlay(name, width, height, DZIcfg);
             }
             function loader(entries) {
-                entries.forEach(async entry => {
-                    if (entry.isIntersecting) {
-                        const div = entry.target;
-                        const ldr = document.createElement("div");
-                        ldr.className = "loaderdiv";
-                        div.appendChild(ldr);
-                        const image = iconmap.get(div);
-                        if (image.notready) {
-                            if (!image.hasOwnProperty("dzip")) {
-                                image.dzip = token ?
-                                        await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
-                                        await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
-                            }
-                            if (!image.hasOwnProperty("dzi")) {
-                                const td = new TextDecoder();
-                                image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
-                                Object.assign(image, parsedzi(image.dzi));
-                                let maxlevel = 0;
-                                let {width, height} = image;
-                                while (width > 1 || height > 1) {
-                                    width = (width + 1) >> 1;
-                                    height = (height + 1) >> 1;
-                                    maxlevel++;
-                                }
-                                image.maxlevel = maxlevel;
-                            }
-                            delete image.notready;
+                entries = entries.filter(entry => entry.isIntersecting);
+                const images = entries.map(entry => iconmap.get(entry.target));
+                if (progress) {
+                    progress.update(images.map(image => image.name + " ").join("\n"));
+                    const percent = 100 / images.length;
+                    document.getElementById("progress").style.background = `linear-gradient(to right,green ${percent}%,white ${percent}%)`;
+                }
+                const loaders = images.map(async image => {
+                    const div = image.div;
+                    observer.unobserve(div);
+                    const ldr = document.createElement("div");
+                    ldr.className = "loaderdiv";
+                    div.appendChild(ldr);
+                    if (image.notready) {
+                        if (!image.hasOwnProperty("dzip")) {
+                            image.dzip = token ?
+                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
                         }
-                        const {canvas, name, base, dzip, format} = image;
-//                        iconmap.delete(canvas);
-                        observer.unobserve(div);
-                        const img = document.createElement("img");
-                        if (base) {
-                            img.onload = () => {
-                                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                                div.removeChild(ldr);
-                            };
-                            img.src = `${base}8/0_0.${format}`;
-                        } else {
-                            const data = await dzip.get(dzip.entries.get(`${name}_files/8/0_0.${format}`));
-                            const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
-                            img.onload = () => {
-                                URL.revokeObjectURL(url);
-                                const {width, height} = image;
-                                const w = width > height ? 128 : 128 * width / height;
-                                const x = (128 - w) / 2;
-                                const h = width > height ? 128 * height / width : 128;
-                                const y = (128 - h) / 2;
-                                canvas.getContext("2d").drawImage(img, x, y, w, h);
-                                div.removeChild(ldr);
-                            };
-                            img.src = url;
+                        if (!image.hasOwnProperty("dzi")) {
+                            const td = new TextDecoder();
+                            image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
+                            Object.assign(image, parsedzi(image.dzi));
+                            let maxlevel = 0;
+                            let {width, height} = image;
+                            while (width > 1 || height > 1) {
+                                width = (width + 1) >> 1;
+                                height = (height + 1) >> 1;
+                                maxlevel++;
+                            }
+                            image.maxlevel = maxlevel;
                         }
+                        delete image.notready;
+                    }
+                    const {canvas, name, base, dzip, format} = image;
+                    const img = document.createElement("img");
+                    if (base) {
+                        img.onload = () => {
+                            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                            div.removeChild(ldr);
+                        };
+                        img.src = `${base}8/0_0.${format}`;
+                    } else {
+                        const data = await dzip.get(dzip.entries.get(`${name}_files/8/0_0.${format}`));
+                        const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
+                        img.onload = () => {
+                            URL.revokeObjectURL(url);
+                            const {width, height} = image;
+                            const w = width > height ? 128 : 128 * width / height;
+                            const x = (128 - w) / 2;
+                            const h = width > height ? 128 * height / width : 128;
+                            const y = (128 - h) / 2;
+                            canvas.getContext("2d").drawImage(img, x, y, w, h);
+                            div.removeChild(ldr);
+                        };
+                        img.src = url;
                     }
                 });
+                if (progress) {
+                    let ready = 0;
+                    const step = () => {
+                        ready++;
+                        if (ready === images.length) {
+                            progress.stop();
+                            progress = false;
+                            setTimeout(() => {
+                                document.getElementById("splash").close();
+                            }, 500);
+                        } else {
+                            const percent = (ready + 1) * 100 / images.length;
+                            document.getElementById("progress").style.background = `linear-gradient(to right, green ${percent}%, white ${percent}%)`;
+                        }
+                    };
+                    for (const loader of loaders)
+                        loader.then(step);
+                }
             }
             function fullCanvas() {
 //                requestAnimationFrame(() => {
@@ -503,5 +546,9 @@
             <!--<div id="striphead">Test</div>-->
             <div id="stripscroller"></div>
         </div>
+        <dialog id="splash" closedby="none">
+            <div id="progress">Loading data</div>
+            <pre id="console"></pre>
+        </dialog>
     </body>
 </html>
