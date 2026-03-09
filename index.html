@@ -82,10 +82,11 @@
         <script>
             const params = new URLSearchParams(location.search);
             const overlay = (s => {
-                if(!s)return s;
-                if(s.endsWith(".dzip"))
+                if (!s)
+                    return s;
+                if (s.endsWith(".dzip"))
                     s = s.substring(0, s.lastIndexOf("/") + 1);
-                else if(!s.endsWith("/"))
+                else if (!s.endsWith("/"))
                     s += "/";
                 return s;
             })(params.get("overlay"));
@@ -111,8 +112,8 @@
                 };
             }
             async function start() {
-                if(!overlay)
-                    document.getElementById("ovlyopacity").style.display="none";
+                if (!overlay)
+                    document.getElementById("ovlyopacity").style.display = "none";
                 const result = token ?
                         await fetch(`${bucket}?delimiter=/&limit=10000&format=json${prefix ? `&prefix=${prefix}` : ""}`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()) :
                         await fetch(`${bucket}?delimiter=/&limit=10000&format=json${prefix ? `&prefix=${prefix}` : ""}`).then(response => response.json());
@@ -137,11 +138,11 @@
 //                        };
 //                    });
 //                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
-                    items=objects.filter(item => "name" in item && (item.name.endsWith(".dzip"))).map(item => item.name).map(zipath => ({
-                        zipath,
-                        name: zipath.substring(zipath.lastIndexOf("/") + 1, zipath.length - 5),
-                        notready: true
-                    }));
+                    items = objects.filter(item => "name" in item && (item.name.endsWith(".dzip"))).map(item => item.name).map(zipath => ({
+                            zipath,
+                            name: zipath.substring(zipath.lastIndexOf("/") + 1, zipath.length - 5),
+                            notready: true
+                        }));
                 } else if (!bucket.startsWith("https://object.cscs.ch/v1/AUTH_")) { //!!
                     const candidates = objects.filter(item => "subdir" in item && item.subdir.includes("."));
                     const requests = candidates.map(async item => {
@@ -153,7 +154,7 @@
                             ...parsedzi(dzi)
                         };
                     });
-                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
+                    items = await Promise.allSettled(requests).then(results => results.filter(result => "value" in result).map(result => result.value));
                 } else {
                     const candidates = objects.filter(item => "name" in item && (item.name.endsWith(".xml") || item.name.endsWith(".dzi")));
                     const requests = candidates.map(async item => {
@@ -165,12 +166,12 @@
                             ...parsedzi(dzi)
                         };
                     });
-                    items=await Promise.allSettled(requests).then(results=>results.filter(result=>"value" in result).map(result=>result.value));
+                    items = await Promise.allSettled(requests).then(results => results.filter(result => "value" in result).map(result => result.value));
                 }
                 const scroller = document.getElementById("stripscroller");
                 for (const item of items) {
                     const image = item;
-                    if(!dzip) {
+                    if (!dzip) {
                         let maxlevel = 0;
                         let {width: w, height: h} = image;
                         while (w > 1 || h > 1) {
@@ -182,7 +183,7 @@
                     }
                     const canvas = document.createElement("canvas");
                     canvas.title = item.name;
-                    if(!dzip) {
+                    if (!dzip) {
                         canvas.width = 128;
                         canvas.height = Math.floor(image.height * 128 / image.width);
                     } else {
@@ -222,16 +223,16 @@
                     container: "nearest"
                 });
                 const image = iconmap.get(active);
-                if(image.notready) {
-                    if(!image.hasOwnProperty("dzip")) {
+                if (image.notready) {
+                    if (!image.hasOwnProperty("dzip")) {
                         image.dzip = token ?
-                            await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
-                            await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
+                                await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+                                await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
                     }
-                    if(!image.hasOwnProperty("dzi")) {
+                    if (!image.hasOwnProperty("dzi")) {
                         const td = new TextDecoder();
                         image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
-                        Object.assign(image,parsedzi(image.dzi));
+                        Object.assign(image, parsedzi(image.dzi));
                         let maxlevel = 0;
                         let {width, height} = image;
                         while (width > 1 || height > 1) {
@@ -258,8 +259,7 @@
                                 tile.crossOrigin = "anonymous";
                                 tile.src = `${base}${maxlevel - level}/${x}_${y}.${format}`;
                             } else {
-                                const temp=`${name}_files/${maxlevel - level}/${x}_${y}.${format}`;
-                                if(dzip.entries.get(temp)===undefined)debugger;
+                                const temp = `${name}_files/${maxlevel - level}/${x}_${y}.${format}`;
                                 const data = await dzip.get(dzip.entries.get(`${name}_files/${maxlevel - level}/${x}_${y}.${format}`));
                                 const url = URL.createObjectURL(new Blob([data], {type: `image/${format}`}));
                                 tile.onerror = () => {
@@ -288,8 +288,8 @@
                 document.getElementById("meta").innerText = `${name}\n${width} x ${height}`;
                 document.getElementById("prev").disabled = !active.previousSibling;
                 document.getElementById("next").disabled = !active.nextSibling;
-                
-                if(overlay)
+
+                if (overlay)
                     setupoverlay(name, width, height, DZIcfg);
             }
             function loader(entries) {
@@ -297,16 +297,16 @@
                     if (entry.isIntersecting) {
                         const canvas = entry.target;
                         const image = iconmap.get(canvas);
-                        if(image.notready) {
-                            if(!image.hasOwnProperty("dzip")) {
+                        if (image.notready) {
+                            if (!image.hasOwnProperty("dzip")) {
                                 image.dzip = token ?
-                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
-                                    await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
+                                        await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
+                                        await netunzip(() => fetch(`${bucket}/${image.zipath}?redirect=false`).then(response => response.json()).then(json => json.url));
                             }
-                            if(!image.hasOwnProperty("dzi")) {
+                            if (!image.hasOwnProperty("dzi")) {
                                 const td = new TextDecoder();
                                 image.dzi = td.decode(await image.dzip.get(image.dzip.entries.get(image.name + ".dzi")));
-                                Object.assign(image,parsedzi(image.dzi));
+                                Object.assign(image, parsedzi(image.dzi));
                                 let maxlevel = 0;
                                 let {width, height} = image;
                                 while (width > 1 || height > 1) {
@@ -371,7 +371,7 @@
             }
             let ovlyview;
             async function setupoverlay(name, imagewidth, imageheight, DZIcfg) {
-                if(ovlyview)
+                if (ovlyview)
                     ovlyview.stop();
                 const ovlycnv = document.getElementById("ovlycnv");
                 ovlycnv.getContext("2d").clearRect(0, 0, ovlycnv.width, ovlycnv.height);
@@ -379,9 +379,9 @@
                         await netunzip(() => fetch(`${overlay}${name}.dzip?redirect=false`, {headers: {authorization: `Bearer ${token}`}}).then(response => response.json()).then(json => json.url)) :
                         await netunzip(() => fetch(`${overlay}${name}.dzip?redirect=false`).then(response => response.json()).then(json => json.url));
                 const dzi = new TextDecoder().decode(await dzip.get(dzip.entries.get(name + ".dzi")));
-                const {width,height,tilesize,overlap,format}=parsedzi(dzi);
-                let w=width;
-                let h=height;
+                const {width, height, tilesize, overlap, format} = parsedzi(dzi);
+                let w = width;
+                let h = height;
                 let maxlevel = 0;
                 while (w > 1 || h > 1) {
                     w = (w + 1) >> 1;
@@ -413,24 +413,24 @@
                         canvas.width = tilesize;
                         canvas.height = tilesize;
                         canvas.getContext("2d").drawImage(tile, x === 0 ? 0 : -overlap, y === 0 ? 0 : -overlap);
-                        const ctx=canvas.getContext("2d");
+                        const ctx = canvas.getContext("2d");
                         ctx.drawImage(tile, x === 0 ? 0 : -overlap, y === 0 ? 0 : -overlap);
 
-                        const imgdata=ctx.getImageData(0,0,tilesize,tilesize);
-                        const data=imgdata.data;
-                        for(let i=0;i<tilesize*tilesize*4;i+=4)
-                            data[i+3]=Math.max(data[i],data[i+1],data[i+2]);
-                        ctx.putImageData(imgdata,0,0);
+                        const imgdata = ctx.getImageData(0, 0, tilesize, tilesize);
+                        const data = imgdata.data;
+                        for (let i = 0; i < tilesize * tilesize * 4; i += 4)
+                            data[i + 3] = Math.max(data[i], data[i + 1], data[i + 2]);
+                        ctx.putImageData(imgdata, 0, 0);
                         return canvas;
                     }
                 };
-                ovlyview=new ZoomView(document.getElementById("ovlycnv"),Ovlycfg);
+                ovlyview = new ZoomView(document.getElementById("ovlycnv"), Ovlycfg);
                 DZIcfg.Overlay = (mainctx, canvaswidth, canvasheight, cutx, cuty, cutw, cuth) => {
                     ovlyview.prepare({
-                        cutx:cutx*width/imagewidth,
-                        cuty:cuty*height/imageheight,
-                        cutw:cutw*width/imagewidth,
-                        cuth:cuth*height/imageheight
+                        cutx: cutx * width / imagewidth,
+                        cuty: cuty * height / imageheight,
+                        cutw: cutw * width / imagewidth,
+                        cuth: cuth * height / imageheight
                     });
                 };
             }
